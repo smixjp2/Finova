@@ -28,12 +28,6 @@ const FMT = (n: number) =>
 export default function Sidebar({ balance, monthIncome, monthExpenses, upcomingSubsCount = 0 }: SidebarProps) {
   const pathname  = usePathname()
   const router    = useRouter()
-  const supabase  = createClient()
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
 
   return (
     <nav style={{
@@ -98,18 +92,7 @@ export default function Sidebar({ balance, monthIncome, monthExpenses, upcomingS
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)' }}>{FMT(monthExpenses)}</div>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          style={{
-            width: '100%', padding: '8px 0', background: 'transparent',
-            border: '1px solid var(--border)', borderRadius: 8, color: 'var(--muted)',
-            fontSize: 13, transition: 'all 0.2s'
-          }}
-          onMouseOver={e => (e.currentTarget.style.borderColor = 'var(--danger)', e.currentTarget.style.color = 'var(--danger)')}
-          onMouseOut={e => (e.currentTarget.style.borderColor = 'var(--border)', e.currentTarget.style.color = 'var(--muted)')}
-        >
-          Déconnexion
-        </button>
+        {/* Logout button hidden - no authentication required */}
       </div>
     </nav>
   )

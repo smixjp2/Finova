@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase-server'
-import { redirect } from 'next/navigation'
 import Sidebar from '@/components/ui/Sidebar'
 
 // Layout partagé pour toutes les pages protégées
@@ -7,14 +6,15 @@ import Sidebar from '@/components/ui/Sidebar'
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // Use mock user ID if no authentication
+  const userId = user?.id ?? '550e8400-e29b-41d4-a716-446655440000'
 
   const now   = new Date()
   const month = now.toISOString().slice(0, 7)
 
   const [{ data: txs }, { data: subs }] = await Promise.all([
-    supabase.from('transactions').select('type,amount,date').eq('user_id', user.id),
-    supabase.from('subscriptions').select('renewal_date').eq('user_id', user.id),
+    supabase.from('transactions').select('type,amount,date').eq('user_id', userId),
+    supabase.from('subscriptions').select('renewal_date').eq('user_id', userId),
   ])
 
   const allTxs       = txs ?? []

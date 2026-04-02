@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase-server'
-import { redirect } from 'next/navigation'
 import { StatCard, Card } from '@/components/ui'
 import DashboardCharts from '@/components/modules/DashboardCharts'
 
@@ -11,13 +10,13 @@ const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','N
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const userId = user?.id ?? '550e8400-e29b-41d4-a716-446655440000'
 
   const [{ data: txs }, { data: savings }, { data: investments }, { data: subs }] = await Promise.all([
-    supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-    supabase.from('savings').select('type,amount').eq('user_id', user.id),
-    supabase.from('investments').select('current_price,quantity').eq('user_id', user.id),
-    supabase.from('subscriptions').select('amount').eq('user_id', user.id),
+    supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
+    supabase.from('savings').select('type,amount').eq('user_id', userId),
+    supabase.from('investments').select('current_price,quantity').eq('user_id', userId),
+    supabase.from('subscriptions').select('amount').eq('user_id', userId),
   ])
 
   const allTxs = txs ?? []
