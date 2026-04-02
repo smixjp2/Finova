@@ -4,15 +4,10 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { Chart, registerables } from 'chart.js'
 import { PageHeader, ActionButton, FormPanel, StatCard } from '@/components/ui'
+import { INVESTMENT_SECTORS, INVESTMENT_SECTOR_COLORS } from '@/lib/constants'
+import { formatMAD, formatDecimal, getToday } from '@/lib/calculations'
 import type { Investment } from '@/types'
 Chart.register(...registerables)
-
-const FMT  = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' MAD'
-const FMT2 = (n: number) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
-const TODAY = () => new Date().toISOString().split('T')[0]
-
-const SECTORS = ['Actions','ETF','Obligations','Crypto','Fonds','Autre']
-const SCOLORS: Record<string, string> = { Actions:'#a78bfa', ETF:'#38bdf8', Obligations:'#f59e0b', Crypto:'#00d4aa', Fonds:'#fb7185', Autre:'#4a6080' }
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px', background: 'var(--card)',
@@ -23,7 +18,7 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
   const [investments, setInvestments] = useState<Investment[]>(initialData)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading]   = useState(false)
-  const [form, setForm] = useState({ symbol: '', name: '', buy_price: '', quantity: '', current_price: '', date: TODAY(), sector: 'Actions' })
+  const [form, setForm] = useState({ symbol: '', name: '', buy_price: '', quantity: '', current_price: '', date: getToday(), sector: INVESTMENT_SECTORS[0] })
   const supabase = createClient()
 
   const totalInvested  = investments.reduce((s, i) => s + i.buy_price * i.quantity, 0)
@@ -47,7 +42,7 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
     const { data, error } = await supabase.from('investments').insert(payload).select().single()
     if (!error && data) {
       setInvestments(prev => [data, ...prev])
-      setForm({ symbol: '', name: '', buy_price: '', quantity: '', current_price: '', date: TODAY(), sector: 'Actions' })
+      setForm({ symbol: '', name: '', buy_price: '', quantity: '', current_price: '', date: getToday(), sector: INVESTMENT_SECTORS[0] })
       setShowForm(false)
     }
     setLoading(false)
@@ -67,10 +62,10 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
   // Sector donut
   const donutRef  = useRef<HTMLCanvasElement>(null)
   const donutInst = useRef<Chart | null>(null)
-  const sectorData = SECTORS.map(s => ({
+  const sectorData = INVESTMENT_SECTORS.map(s => ({
     name: s,
     value: investments.filter(i => i.sector === s).reduce((sum, i) => sum + i.current_price * i.quantity, 0),
-    fill: SCOLORS[s],
+    fill: INVESTMENT_SECTOR_COLORS[s],
   })).filter(d => d.value > 0)
 
   useEffect(() => {
@@ -90,9 +85,9 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
         action={<ActionButton color="#a78bfa" textColor="#fff" onClick={() => setShowForm(!showForm)}>{showForm ? 'Fermer' : '+ Position'}</ActionButton>} />
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <StatCard label="Valeur portefeuille" value={FMT(totalCurrent)}    color="#a78bfa" icon="💼" />
-        <StatCard label="Capital investi"     value={FMT(totalInvested)}   color="var(--muted)" icon="💵" />
-        <StatCard label="Plus/Moins-value"    value={(totalPL >= 0 ? '+' : '') + FMT(totalPL)} color={totalPL >= 0 ? 'var(--acc)' : 'var(--danger)'} icon={totalPL >= 0 ? '📈' : '📉'} sub={(totalPLpct >= 0 ? '+' : '') + FMT2(totalPLpct) + '%'} />
+        <StatCard label="Valeur portefeuille" value={formatMAD(totalCurrent)}    color="#a78bfa" icon="💼" />
+        <StatCard label="Capital investi"     value={formatMAD(totalInvested)}   color="var(--muted)" icon="💵" />
+        <StatCard label="Plus/Moins-value"    value={(totalPL >= 0 ? '+' : '') + formatMAD(totalPL)} color={totalPL >= 0 ? 'var(--acc)' : 'var(--danger)'} icon={totalPL >= 0 ? '📈' : '📉'} sub={(totalPLpct >= 0 ? '+' : '') + formatDecimal(totalPLpct, 2) + '%'} />
         <StatCard label="Positions"           value={investments.length}   color="#38bdf8" icon="🎯" />
       </div>
 
@@ -104,7 +99,7 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
             <div><label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Nom (optionnel)</label><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Apple Inc." style={inputStyle} /></div>
             <div><label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Secteur</label>
               <select value={form.sector} onChange={e => setForm(f => ({ ...f, sector: e.target.value }))} style={inputStyle}>
-                {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                {INVESTMENT_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           </div>
@@ -147,7 +142,7 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
                 const pl     = (inv.current_price - inv.buy_price) * inv.quantity
                 const plPct  = ((inv.current_price - inv.buy_price) / inv.buy_price) * 100
                 const val    = inv.current_price * inv.quantity
-                const color  = SCOLORS[inv.sector] ?? 'var(--muted)'
+                const color  = INVESTMENT_SECTOR_COLORS[inv.sector] ?? 'var(--muted)'
                 return (
                   <div key={inv.id} style={{ background: 'var(--surf)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -156,12 +151,12 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{inv.symbol}{inv.name ? ` — ${inv.name}` : ''}</div>
-                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>{inv.quantity} × {FMT2(inv.buy_price)} MAD · {inv.sector}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>{inv.quantity} × {formatDecimal(inv.buy_price, 2)} MAD · {inv.sector}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{FMT(val)}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{formatMAD(val)}</div>
                         <div style={{ fontSize: 12, fontWeight: 600, color: pl >= 0 ? 'var(--acc)' : 'var(--danger)' }}>
-                          {pl >= 0 ? '+' : ''}{FMT(pl)} ({FMT2(plPct)}%)
+                          {pl >= 0 ? '+' : ''}{formatMAD(pl)} ({formatDecimal(plPct, 2)}%)
                         </div>
                       </div>
                       <button onClick={() => deleteInv(inv.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, padding: '2px 6px', cursor: 'pointer' }}

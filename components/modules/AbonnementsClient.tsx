@@ -3,30 +3,20 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { PageHeader, ActionButton, FormPanel, StatCard } from '@/components/ui'
+import { SUBSCRIPTION_CATEGORIES, SUBSCRIPTION_ICONS, SUBSCRIPTION_COLORS, daysUntil } from '@/lib/constants'
+import { formatMAD } from '@/lib/calculations'
 import type { Subscription } from '@/types'
-
-const FMT = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' MAD'
-const TODAY = () => new Date().toISOString().split('T')[0]
-const SUB_CATS = ['Streaming','Logiciel','Cloud','Sécurité','Musique','Sport','Info','Autre']
-const SUB_ICONS: Record<string, string> = { Streaming:'🎬',Logiciel:'💻',Cloud:'☁️',Sécurité:'🔒',Musique:'🎵',Sport:'⚽',Info:'📰',Autre:'📦' }
-const SUB_COLORS: Record<string, string> = { Streaming:'#ec4899',Logiciel:'#a78bfa',Cloud:'#38bdf8',Sécurité:'#f59e0b',Musique:'#00d4aa',Sport:'#f97316',Info:'#38bdf8',Autre:'#4a6080' }
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px', background: 'var(--card)',
   border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 14, outline: 'none',
 }
 
-function daysUntil(dateStr: string) {
-  const t = new Date(); t.setHours(0, 0, 0, 0)
-  const r = new Date(dateStr); r.setHours(0, 0, 0, 0)
-  return Math.ceil((r.getTime() - t.getTime()) / 86400000)
-}
-
 export default function AbonnementsClient({ initialData, userId }: { initialData: Subscription[]; userId: string }) {
   const [subs, setSubs]       = useState<Subscription[]>(initialData)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading]   = useState(false)
-  const [form, setForm] = useState({ name: '', amount: '', renewal_date: '', category: 'Streaming', auto_save: true })
+  const [form, setForm] = useState({ name: '', amount: '', renewal_date: '', category: SUBSCRIPTION_CATEGORIES[0], auto_save: true })
   const supabase = createClient()
 
   const addSub = async () => {
@@ -37,7 +27,7 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
       .select().single()
     if (!error && data) {
       setSubs(prev => [...prev, data].sort((a, b) => a.renewal_date.localeCompare(b.renewal_date)))
-      setForm({ name: '', amount: '', renewal_date: '', category: 'Streaming', auto_save: true })
+      setForm({ name: '', amount: '', renewal_date: '', category: SUBSCRIPTION_CATEGORIES[0], auto_save: true })
       setShowForm(false)
     }
     setLoading(false)
@@ -71,9 +61,9 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
         action={<ActionButton color="#38bdf8" textColor="#000" onClick={() => setShowForm(!showForm)}>{showForm ? 'Fermer' : '+ Abonnement'}</ActionButton>} />
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <StatCard label="Total annuel"       value={FMT(totalAnnual)}         color="#38bdf8"      icon="📅" />
-        <StatCard label="Coût mensuel moyen" value={FMT(totalMonthly)}        color="var(--muted)" icon="📆" />
-        <StatCard label="À épargner/mois"    value={FMT(totalMonthlySaving)}  color="#f59e0b"      icon="🎯" sub="Pour tous renouvellements" />
+        <StatCard label="Total annuel"       value={formatMAD(totalAnnual)}         color="#38bdf8"      icon="📅" />
+        <StatCard label="Coût mensuel moyen" value={formatMAD(totalMonthly)}        color="var(--muted)" icon="📆" />
+        <StatCard label="À épargner/mois"    value={formatMAD(totalMonthlySaving)}  color="#f59e0b"      icon="🎯" sub="Pour tous renouvellements" />
         <StatCard label="Abonnements actifs" value={subs.length}              color="var(--acc)"   icon="✅" />
       </div>
 
@@ -85,7 +75,7 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               {upcoming.map(s => (
                 <span key={s.id} style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {s.name} — {FMT(s.amount)} dans {daysUntil(s.renewal_date)} jours
+                  {s.name} — {formatMAD(s.amount)} dans {daysUntil(s.renewal_date)} jours
                 </span>
               ))}
             </div>
@@ -101,7 +91,7 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
             <div><label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Montant annuel (MAD)</label><input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0" style={inputStyle} /></div>
             <div><label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Catégorie</label>
               <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={inputStyle}>
-                {SUB_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                {SUBSCRIPTION_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>
@@ -126,20 +116,20 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {subsWithInfo.map(sub => {
-            const color  = SUB_COLORS[sub.category] ?? 'var(--muted)'
+            const color  = SUBSCRIPTION_COLORS[sub.category] ?? 'var(--muted)'
             const urgent = sub.days <= 30
             const soon   = sub.days <= 60 && sub.days > 30
             const statusColor = urgent ? 'var(--danger)' : soon ? '#f59e0b' : 'var(--acc)'
             return (
               <div key={sub.id} style={{ background: 'var(--card)', border: `1px solid ${urgent ? 'rgba(244,63,94,0.35)' : 'var(--border)'}`, borderRadius: 12, padding: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: sub.auto_save ? 14 : 0 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 10, background: color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                    {SUB_ICONS[sub.category] ?? '📦'}
+                  <div style={{ width: 42, height: 42, borderRadius: 10, background: SUBSCRIPTION_COLORS[sub.category] + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                    {SUBSCRIPTION_ICONS[sub.category] ?? '📦'}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{sub.name}</div>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: color + '22', color }}>{sub.category}</span>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: SUBSCRIPTION_COLORS[sub.category] + '22', color: SUBSCRIPTION_COLORS[sub.category] }}>{sub.category}</span>
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--muted)' }}>
                       Renouvellement : {sub.renewal_date.split('-').reverse().join('/')} —{' '}
@@ -149,7 +139,7 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{FMT(sub.amount)}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{formatMAD(sub.amount)}</div>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>annuel</div>
                   </div>
                   <button onClick={() => deleteSub(sub.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, padding: '2px 6px', cursor: 'pointer' }}
@@ -159,8 +149,8 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
                 {sub.auto_save && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
-                      <span>🎯 Cagnotte : <span style={{ color: '#f59e0b', fontWeight: 700 }}>{FMT(sub.monthly)}/mois</span></span>
-                      <span>{FMT(Math.round(sub.saved))} / {FMT(sub.amount)}</span>
+                      <span>🎯 Cagnotte : <span style={{ color: '#f59e0b', fontWeight: 700 }}>{formatMAD(sub.monthly)}/mois</span></span>
+                      <span>{formatMAD(Math.round(sub.saved))} / {formatMAD(sub.amount)}</span>
                     </div>
                     <div style={{ height: 8, background: 'rgba(255,255,255,0.07)', borderRadius: 4, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${sub.pct}%`, background: 'linear-gradient(90deg, #f59e0b, #00d4aa)', borderRadius: 4, transition: 'width 0.6s ease' }} />
@@ -168,7 +158,7 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                       <span>{sub.pct}% épargné</span>
                       <span style={{ color: sub.needed <= 0 ? 'var(--acc)' : '#f59e0b' }}>
-                        {sub.needed <= 0 ? '✅ Objectif atteint !' : `Encore ${FMT(Math.round(sub.needed))} à épargner`}
+                        {sub.needed <= 0 ? '✅ Objectif atteint !' : `Encore ${formatMAD(Math.round(sub.needed))} à épargner`}
                       </span>
                     </div>
                   </div>

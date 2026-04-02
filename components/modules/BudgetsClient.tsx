@@ -3,14 +3,9 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { PageHeader, ActionButton, FormPanel } from '@/components/ui'
+import { EXPENSE_CATEGORIES, getCategoryColor } from '@/lib/constants'
+import { formatMAD } from '@/lib/calculations'
 import type { Budget } from '@/types'
-
-const CATS = ['Logement','Alimentation','Transport','Loisirs','Shopping','Santé','Éducation','Abonnements','Autre']
-const CC: Record<string, string> = {
-  Logement:'#7c3aed',Alimentation:'#f59e0b',Transport:'#3b82f6',Loisirs:'#ec4899',
-  Shopping:'#a78bfa',Santé:'#10b981',Éducation:'#14b8a6',Abonnements:'#f97316',Autre:'#64748b',
-}
-const FMT = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' MAD'
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px', background: 'var(--card)',
   border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 14, outline: 'none',
@@ -25,7 +20,8 @@ interface Props {
 export default function BudgetsClient({ initialBudgets, monthTxs, userId }: Props) {
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets)
   const [showForm, setShowForm] = useState(false)
-  const [bf, setBf] = useState({ category: 'Alimentation', limit: '' })
+  const [loading, setLoading]   = useState(false)
+  const [bf, setBf] = useState({ category: EXPENSE_CATEGORIES[0], limit: '' })
   const supabase = createClient()
 
   const spent: Record<string, number> = {}
@@ -35,7 +31,8 @@ export default function BudgetsClient({ initialBudgets, monthTxs, userId }: Prop
 
   const addBudget = async () => {
     if (!bf.limit || +bf.limit <= 0) return
-    const payload = { user_id: userId, category: bf.category, limit_amount: +bf.limit, color: CC[bf.category] ?? '#64748b' }
+    setLoading(true)
+    const payload = { user_id: userId, category: bf.category, limit_amount: +bf.limit, color: getCategoryColor(bf.category) }
     const existing = budgets.find(b => b.category === bf.category)
     if (existing) {
       const { data } = await supabase.from('budgets').update({ limit_amount: +bf.limit }).eq('id', existing.id).select().single()
@@ -44,8 +41,9 @@ export default function BudgetsClient({ initialBudgets, monthTxs, userId }: Prop
       const { data } = await supabase.from('budgets').insert(payload).select().single()
       if (data) setBudgets(prev => [...prev, data])
     }
-    setBf({ category: 'Alimentation', limit: '' })
+    setBf({ category: EXPENSE_CATEGORIES[0], limit: '' })
     setShowForm(false)
+    setLoading(false)
   }
 
   const deleteBudget = async (id: string) => {
@@ -64,7 +62,7 @@ export default function BudgetsClient({ initialBudgets, monthTxs, userId }: Prop
             <div>
               <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 5 }}>Catégorie</label>
               <select value={bf.category} onChange={e => setBf(f => ({ ...f, category: e.target.value }))} style={inputStyle}>
-                {CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
@@ -73,7 +71,7 @@ export default function BudgetsClient({ initialBudgets, monthTxs, userId }: Prop
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addBudget} style={{ flex: 1, padding: '9px 0', background: 'var(--acc)', border: 'none', borderRadius: 8, color: '#000', fontWeight: 700, fontSize: 14 }}>Enregistrer</button>
+            <button onClick={addBudget} disabled={loading} style={{ flex: 1, padding: '9px 0', background: loading ? 'var(--muted)' : 'var(--acc)', border: 'none', borderRadius: 8, color: '#000', fontWeight: 700, fontSize: 14 }}>{loading ? 'Enregistrement...' : 'Enregistrer'}</button>
             <button onClick={() => setShowForm(false)} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--muted)', fontSize: 14 }}>Annuler</button>
           </div>
         </FormPanel>
@@ -94,7 +92,7 @@ export default function BudgetsClient({ initialBudgets, monthTxs, userId }: Prop
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{b.category}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>{FMT(s)} / {FMT(b.limit_amount)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>{formatMAD(s)} / {formatMAD(b.limit_amount)}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: over ? 'var(--danger)' : pct > 80 ? '#f59e0b' : 'var(--acc)' }}>{pct}%</span>
@@ -104,7 +102,7 @@ export default function BudgetsClient({ initialBudgets, monthTxs, userId }: Prop
                 <div style={{ height: 6, background: 'rgba(255,255,255,0.07)', borderRadius: 4 }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: over ? 'var(--danger)' : pct > 80 ? '#f59e0b' : b.color, borderRadius: 4, transition: 'width 0.5s ease' }} />
                 </div>
-                {over && <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 8 }}>⚠ Dépassement : {FMT(s - b.limit_amount)}</div>}
+                {over && <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 8 }}>⚠ Dépassement : {formatMAD(s - b.limit_amount)}</div>}
               </div>
             )
           })}

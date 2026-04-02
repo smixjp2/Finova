@@ -4,11 +4,9 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { Chart, registerables } from 'chart.js'
 import { PageHeader, ActionButton, FormPanel, StatCard } from '@/components/ui'
+import { formatMAD, getToday } from '@/lib/calculations'
 import type { SavingEntry } from '@/types'
 Chart.register(...registerables)
-
-const FMT = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' MAD'
-const TODAY = () => new Date().toISOString().split('T')[0]
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px', background: 'var(--card)',
   border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 14, outline: 'none',
@@ -18,7 +16,7 @@ export default function SavingsClient({ initialData, userId }: { initialData: Sa
   const [entries, setEntries] = useState<SavingEntry[]>(initialData)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading]   = useState(false)
-  const [form, setForm] = useState({ type: 'deposit' as 'deposit' | 'withdrawal', amount: '', description: '', date: TODAY() })
+  const [form, setForm] = useState({ type: 'deposit' as 'deposit' | 'withdrawal', amount: '', description: '', date: getToday() })
   const supabase = createClient()
 
   const totalSaved  = entries.reduce((s, e) => s + (e.type === 'deposit' ? e.amount : -e.amount), 0)
@@ -33,7 +31,7 @@ export default function SavingsClient({ initialData, userId }: { initialData: Sa
       .select().single()
     if (!error && data) {
       setEntries(prev => [data, ...prev])
-      setForm({ type: form.type, amount: '', description: '', date: TODAY() })
+      setForm({ type: form.type, amount: '', description: '', date: getToday() })
       setShowForm(false)
     }
     setLoading(false)
@@ -69,9 +67,9 @@ export default function SavingsClient({ initialData, userId }: { initialData: Sa
         action={<ActionButton color="#f59e0b" onClick={() => setShowForm(!showForm)}>{showForm ? 'Fermer' : '+ Mouvement'}</ActionButton>} />
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <StatCard label="Solde Cornet"  value={FMT(Math.max(0, totalSaved))} color="#f59e0b" icon="💰" sub="Épargne disponible" />
-        <StatCard label="Total versé"   value={FMT(totalIn)}                 color="var(--acc)" icon="⬆" />
-        <StatCard label="Total retiré"  value={FMT(totalOut)}                color="var(--danger)" icon="⬇" />
+        <StatCard label="Solde Cornet"  value={formatMAD(Math.max(0, totalSaved))} color="#f59e0b" icon="💰" sub="Épargne disponible" />
+        <StatCard label="Total versé"   value={formatMAD(totalIn)}                 color="var(--acc)" icon="⬆" />
+        <StatCard label="Total retiré"  value={formatMAD(totalOut)}                color="var(--danger)" icon="⬇" />
         <StatCard label="Mouvements"    value={entries.length}               color="var(--muted)" icon="📋" />
       </div>
 
@@ -120,7 +118,7 @@ export default function SavingsClient({ initialData, userId }: { initialData: Sa
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{e.date.split('-').reverse().join('/')}</div>
               </div>
               <div style={{ fontSize: 15, fontWeight: 600, color: e.type === 'deposit' ? '#f59e0b' : 'var(--danger)', marginRight: 8 }}>
-                {e.type === 'deposit' ? '+ ' : '- '}{FMT(e.amount)}
+                {e.type === 'deposit' ? '+ ' : '- '}{formatMAD(e.amount)}
               </div>
               <button onClick={() => deleteEntry(e.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, padding: '2px 6px', cursor: 'pointer' }}
                 onMouseOver={ev => (ev.currentTarget.style.color = 'var(--danger)')} onMouseOut={ev => (ev.currentTarget.style.color = 'var(--muted)')}>×</button>
