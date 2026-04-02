@@ -5,10 +5,6 @@ export default async function AbonnementsPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  if (!user) {
-    return <div style={{ padding: '20px', color: '#ccc' }}>Non authentifié. Veuillez vous connecter.</div>
-  }
-  
-  const { data } = await supabase.from('subscriptions').select('*').eq('user_id', user.id).order('renewal_date', { ascending: true })
-  return <AbonnementsClient initialData={data ?? []} userId={user.id} />
+  const { data } = await supabase.from('subscriptions').select('*').eq('user_id', user!.id).order('renewal_date', { ascending: true })
+  return <AbonnementsClient initialData={data ?? []} userId={user!.id} />
 }
