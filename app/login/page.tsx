@@ -1,1 +1,5 @@
-// Página de login - eliminada por solicitud del usuario
+import { redirect } from 'next/navigation'
+
+export default function LoginPage() {
+  redirect('/dashboard')
+}
