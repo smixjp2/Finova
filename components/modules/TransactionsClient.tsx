@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { PageHeader, ActionButton, FormPanel, Card } from '@/components/ui'
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, getToday, getCurrentMonth, formatMAD } from '@/lib/constants'
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, getToday, getCurrentMonth } from '@/lib/constants'
+import { formatMAD } from '@/lib/calculations'
 import type { Transaction, NewTransaction } from '@/types'
 
 const CATS = {
