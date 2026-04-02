@@ -42,7 +42,7 @@ export default function DashboardCharts({ chartData, catData, recentTxs }: Props
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + Math.round(c.parsed.y).toLocaleString('fr-FR') + ' MAD' } } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + Math.round(c.parsed.y ?? 0).toLocaleString('fr-FR') + ' MAD' } } },
         scales: {
           x: { ticks: { color: '#4a6080', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
           y: { ticks: { color: '#4a6080', font: { size: 11 }, callback: v => Math.round(+v).toLocaleString('fr-FR') }, grid: { color: 'rgba(255,255,255,0.04)' } },
