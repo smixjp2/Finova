@@ -27,36 +27,54 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
   const totalPLpct     = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0
 
   const addInv = async () => {
-    if (!form.buy_price || !form.quantity || +form.buy_price <= 0 || +form.quantity <= 0) return
-    setLoading(true)
-    const payload = {
-      user_id: userId,
-      symbol: form.symbol.toUpperCase(),
-      name: form.name || null,
-      sector: form.sector,
-      buy_price: +form.buy_price,
-      quantity: +form.quantity,
-      current_price: form.current_price ? +form.current_price : +form.buy_price,
-      date: form.date,
+    if (!form.buy_price || !form.quantity || +form.buy_price <= 0 || +form.quantity <= 0) {
+      alert('Prix d\'achat et quantité requis')
+      return
     }
-    const { data, error } = await supabase.from('investments').insert(payload).select().single()
-    if (!error && data) {
-      setInvestments(prev => [data, ...prev])
-      setForm({ symbol: '', name: '', buy_price: '', quantity: '', current_price: '', date: getToday(), sector: INVESTMENT_SECTORS[0] })
-      setShowForm(false)
+    setLoading(true)
+    try {
+      const payload = {
+        user_id: userId,
+        symbol: form.symbol.toUpperCase(),
+        name: form.name || null,
+        sector: form.sector,
+        buy_price: +form.buy_price,
+        quantity: +form.quantity,
+        current_price: form.current_price ? +form.current_price : +form.buy_price,
+        date: form.date,
+      }
+      const { data, error } = await supabase.from('investments').insert(payload).select().single()
+      if (error) throw error
+      if (data) {
+        setInvestments(prev => [data, ...prev])
+        setForm({ symbol: '', name: '', buy_price: '', quantity: '', current_price: '', date: getToday(), sector: INVESTMENT_SECTORS[0] })
+        setShowForm(false)
+      }
+    } catch (err: any) {
+      console.error('Erreur investissement:', err)
+      alert('Erreur: ' + (err.message || 'Impossible d\'ajouter l\'investissement'))
     }
     setLoading(false)
   }
 
   const updatePrice = async (id: string, price: number) => {
     if (!price || isNaN(price) || price <= 0) return
-    await supabase.from('investments').update({ current_price: price }).eq('id', id)
-    setInvestments(prev => prev.map(i => i.id === id ? { ...i, current_price: price } : i))
+    try {
+      await supabase.from('investments').update({ current_price: price }).eq('id', id)
+      setInvestments(prev => prev.map(i => i.id === id ? { ...i, current_price: price } : i))
+    } catch (err) {
+      console.error('Erreur mise à jour prix:', err)
+    }
   }
 
   const deleteInv = async (id: string) => {
-    await supabase.from('investments').delete().eq('id', id)
-    setInvestments(prev => prev.filter(i => i.id !== id))
+    try {
+      await supabase.from('investments').delete().eq('id', id)
+      setInvestments(prev => prev.filter(i => i.id !== id))
+    } catch (err) {
+      console.error('Erreur suppression investissement:', err)
+      alert('Erreur lors de la suppression')
+    }
   }
 
   // Sector donut

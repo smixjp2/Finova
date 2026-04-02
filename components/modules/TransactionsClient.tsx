@@ -34,17 +34,28 @@ export default function TransactionsClient({ initialTxs, userId }: Props) {
   const supabase = createClient()
 
   const addTx = async () => {
-    if (!form.amount || form.amount <= 0) return
+    if (!form.amount || form.amount <= 0) {
+      alert('Montant invalide')
+      return
+    }
     setLoading(true)
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert({ ...form, user_id: userId })
-      .select()
-      .single()
-    if (!error && data) {
-      setTxs(prev => [data, ...prev])
-      setForm({ type: form.type, amount: 0, category: form.category, description: '', date: getToday() })
-      setShowAdd(false)
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert({ ...form, user_id: userId })
+        .select()
+        .single()
+      if (error) {
+        console.error('Erreur ajout transaction:', error)
+        alert('Erreur: ' + (error.message || 'Impossible d\'ajouter la transaction'))
+      } else if (data) {
+        setTxs(prev => [data, ...prev])
+        setForm({ type: form.type, amount: 0, category: form.category, description: '', date: getToday() })
+        setShowAdd(false)
+      }
+    } catch (err) {
+      console.error('Erreur:', err)
+      alert('Erreur réseau ou configuration Supabase')
     }
     setLoading(false)
   }

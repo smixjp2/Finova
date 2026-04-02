@@ -30,25 +30,40 @@ export default function BudgetsClient({ initialBudgets, monthTxs, userId }: Prop
   })
 
   const addBudget = async () => {
-    if (!bf.limit || +bf.limit <= 0) return
-    setLoading(true)
-    const payload = { user_id: userId, category: bf.category, limit_amount: +bf.limit, color: getCategoryColor(bf.category) }
-    const existing = budgets.find(b => b.category === bf.category)
-    if (existing) {
-      const { data } = await supabase.from('budgets').update({ limit_amount: +bf.limit }).eq('id', existing.id).select().single()
-      if (data) setBudgets(prev => prev.map(b => b.id === existing.id ? data : b))
-    } else {
-      const { data } = await supabase.from('budgets').insert(payload).select().single()
-      if (data) setBudgets(prev => [...prev, data])
+    if (!bf.limit || +bf.limit <= 0) {
+      alert('Plafond invalide')
+      return
     }
-    setBf({ category: EXPENSE_CATEGORIES[0], limit: '' })
-    setShowForm(false)
+    setLoading(true)
+    try {
+      const payload = { user_id: userId, category: bf.category, limit_amount: +bf.limit, color: getCategoryColor(bf.category) }
+      const existing = budgets.find(b => b.category === bf.category)
+      if (existing) {
+        const { data, error } = await supabase.from('budgets').update({ limit_amount: +bf.limit }).eq('id', existing.id).select().single()
+        if (error) throw error
+        if (data) setBudgets(prev => prev.map(b => b.id === existing.id ? data : b))
+      } else {
+        const { data, error } = await supabase.from('budgets').insert(payload).select().single()
+        if (error) throw error
+        if (data) setBudgets(prev => [...prev, data])
+      }
+      setBf({ category: EXPENSE_CATEGORIES[0], limit: '' })
+      setShowForm(false)
+    } catch (err: any) {
+      console.error('Erreur budget:', err)
+      alert('Erreur: ' + (err.message || 'Impossible d\'ajouter le budget'))
+    }
     setLoading(false)
   }
 
   const deleteBudget = async (id: string) => {
-    await supabase.from('budgets').delete().eq('id', id)
-    setBudgets(prev => prev.filter(b => b.id !== id))
+    try {
+      await supabase.from('budgets').delete().eq('id', id)
+      setBudgets(prev => prev.filter(b => b.id !== id))
+    } catch (err) {
+      console.error('Erreur suppression budget:', err)
+      alert('Erreur lors de la suppression')
+    }
   }
 
   return (

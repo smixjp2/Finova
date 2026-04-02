@@ -20,22 +20,36 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
   const supabase = createClient()
 
   const addSub = async () => {
-    if (!form.name || !form.amount || !form.renewal_date || +form.amount <= 0) return
+    if (!form.name || !form.amount || !form.renewal_date || +form.amount <= 0) {
+      alert('Veuillez remplir tous les champs')
+      return
+    }
     setLoading(true)
-    const { data, error } = await supabase.from('subscriptions')
-      .insert({ ...form, amount: +form.amount, user_id: userId })
-      .select().single()
-    if (!error && data) {
-      setSubs(prev => [...prev, data].sort((a, b) => a.renewal_date.localeCompare(b.renewal_date)))
-      setForm({ name: '', amount: '', renewal_date: '', category: SUBSCRIPTION_CATEGORIES[0], auto_save: true })
-      setShowForm(false)
+    try {
+      const { data, error } = await supabase.from('subscriptions')
+        .insert({ ...form, amount: +form.amount, user_id: userId })
+        .select().single()
+      if (error) throw error
+      if (data) {
+        setSubs(prev => [...prev, data].sort((a, b) => a.renewal_date.localeCompare(b.renewal_date)))
+        setForm({ name: '', amount: '', renewal_date: '', category: SUBSCRIPTION_CATEGORIES[0], auto_save: true })
+        setShowForm(false)
+      }
+    } catch (err: any) {
+      console.error('Erreur abonnement:', err)
+      alert('Erreur: ' + (err.message || 'Impossible d\'ajouter l\'abonnement'))
     }
     setLoading(false)
   }
 
   const deleteSub = async (id: string) => {
-    await supabase.from('subscriptions').delete().eq('id', id)
-    setSubs(prev => prev.filter(s => s.id !== id))
+    try {
+      await supabase.from('subscriptions').delete().eq('id', id)
+      setSubs(prev => prev.filter(s => s.id !== id))
+    } catch (err) {
+      console.error('Erreur suppression abonnement:', err)
+      alert('Erreur lors de la suppression')
+    }
   }
 
   const totalAnnual    = subs.reduce((s, sub) => s + sub.amount, 0)

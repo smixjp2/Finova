@@ -25,22 +25,38 @@ export default function SavingsClient({ initialData, userId }: { initialData: Sa
   const totalOut    = entries.filter(e => e.type === 'withdrawal').reduce((s, e) => s + e.amount, 0)
 
   const addEntry = async () => {
-    if (!form.amount || isNaN(+form.amount) || +form.amount <= 0) return
+    if (!form.amount || isNaN(+form.amount) || +form.amount <= 0) {
+      alert('Montant invalide')
+      return
+    }
     setLoading(true)
-    const { data, error } = await supabase.from('savings')
-      .insert({ ...form, amount: +form.amount, user_id: userId })
-      .select().single()
-    if (!error && data) {
-      setEntries(prev => [data, ...prev])
-      setForm({ type: form.type, amount: '', description: '', date: getToday() })
-      setShowForm(false)
+    try {
+      const { data, error } = await supabase.from('savings')
+        .insert({ ...form, amount: +form.amount, user_id: userId })
+        .select().single()
+      if (error) {
+        console.error('Erreur ajout épargne:', error)
+        alert('Erreur: ' + (error.message || 'Impossible d\'ajouter l\'entrée'))
+      } else if (data) {
+        setEntries(prev => [data, ...prev])
+        setForm({ type: form.type, amount: '', description: '', date: getToday() })
+        setShowForm(false)
+      }
+    } catch (err) {
+      console.error('Erreur:', err)
+      alert('Erreur réseau ou configuration Supabase')
     }
     setLoading(false)
   }
 
   const deleteEntry = async (id: string) => {
-    await supabase.from('savings').delete().eq('id', id)
-    setEntries(prev => prev.filter(e => e.id !== id))
+    try {
+      await supabase.from('savings').delete().eq('id', id)
+      setEntries(prev => prev.filter(e => e.id !== id))
+    } catch (err) {
+      console.error('Erreur suppression:', err)
+      alert('Erreur lors de la suppression')
+    }
   }
 
   // Line chart cumulative
