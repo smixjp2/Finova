@@ -11,4 +11,4 @@ export default async function BudgetsPage() {
     supabase.from('transactions').select('category,amount,type').eq('user_id', userId).like('date', `${month}%`),
   ])
   return <BudgetsClient initialBudgets={budgets ?? []} monthTxs={monthTxs ?? []} userId={userId} />
-}}
+}

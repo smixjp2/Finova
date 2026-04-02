@@ -7,4 +7,4 @@ export default async function SavingsPage() {
   const userId = user?.id ?? '550e8400-e29b-41d4-a716-446655440000'
   const { data } = await supabase.from('savings').select('*').eq('user_id', userId).order('date', { ascending: false })
   return <SavingsClient initialData={data ?? []} userId={userId} />
-}}
+}

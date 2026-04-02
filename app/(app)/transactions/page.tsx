@@ -13,4 +13,4 @@ export default async function TransactionsPage() {
     .order('date', { ascending: false })
 
   return <TransactionsClient initialTxs={txs ?? []} userId={userId} />
-}}
+}
