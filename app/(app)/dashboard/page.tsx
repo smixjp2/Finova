@@ -1,11 +1,13 @@
 import { createClient } from '@/lib/supabase-server'
-import { StatCard, Card } from '@/components/ui'
+import { StatCard } from '@/components/ui'
 import DashboardCharts from '@/components/modules/DashboardCharts'
-
-const FMT = (n: number) =>
-  new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n)) + ' MAD'
+import { calculateFinancialSummary, formatMAD, getLast6Months } from '@/lib/calculations'
 
 const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc']
+const CC: Record<string, string> = {
+  Logement:'#7c3aed',Alimentation:'#f59e0b',Transport:'#3b82f6',Loisirs:'#ec4899',
+  Shopping:'#a78bfa',Santé:'#10b981',Éducation:'#14b8a6',Abonnements:'#f97316',Autre:'#64748b',
+}
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -19,42 +21,25 @@ export default async function DashboardPage() {
     supabase.from('subscriptions').select('amount').eq('user_id', userId),
   ])
 
-  const allTxs = txs ?? []
   const month  = new Date().toISOString().slice(0, 7)
+  const allTxs = (txs ?? []) as any[]
+  const monthTxs = allTxs.filter(t => t.date.startsWith(month))
 
-  const totalIncome   = allTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const totalExp      = allTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-  const balance       = totalIncome - totalExp
-  const monthTxs      = allTxs.filter(t => t.date.startsWith(month))
-  const monthIncome   = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const monthExpenses = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  // Calculate comprehensive summary
+  const summary = calculateFinancialSummary(
+    allTxs,
+    (savings ?? []) as any[],
+    (investments ?? []) as any[],
+    (subs ?? []) as any[]
+  )
 
-  // Patrimoine
-  const totalSaved    = (savings ?? []).reduce((s, e) => s + (e.type === 'deposit' ? e.amount : -e.amount), 0)
-  const totalPortfolio = (investments ?? []).reduce((s, i) => s + i.current_price * i.quantity, 0)
-  const totalSubs     = (subs ?? []).reduce((s, sub) => s + sub.amount, 0)
-  const patrimoine    = Math.max(0, totalSaved) + totalPortfolio + balance
+  // Chart data using shared utility
+  const chartData = getLast6Months(allTxs)
 
-  // Chart : 6 derniers mois
-  const chartData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(); d.setMonth(d.getMonth() - (5 - i))
-    const m = d.toISOString().slice(0, 7)
-    const t = allTxs.filter(x => x.date.startsWith(m))
-    return {
-      name: MONTHS[d.getMonth()],
-      inc:  t.filter(x => x.type === 'income').reduce((s, x) => s + x.amount, 0),
-      exp:  t.filter(x => x.type === 'expense').reduce((s, x) => s + x.amount, 0),
-    }
-  })
-
-  // Donut dépenses du mois
-  const CC: Record<string, string> = {
-    Logement:'#7c3aed',Alimentation:'#f59e0b',Transport:'#3b82f6',Loisirs:'#ec4899',
-    Shopping:'#a78bfa',Santé:'#10b981',Éducation:'#14b8a6',Abonnements:'#f97316',Autre:'#64748b',
-  }
+  // Category breakdown for current month
   const catData = monthTxs
-    .filter(t => t.type === 'expense')
-    .reduce((acc: { name: string; value: number; fill: string }[], t) => {
+    .filter((t: any) => t.type === 'expense')
+    .reduce((acc: { name: string; value: number; fill: string }[], t: any) => {
       const e = acc.find(c => c.name === t.category)
       if (e) e.value += t.amount
       else acc.push({ name: t.category, value: t.amount, fill: CC[t.category] ?? '#64748b' })
@@ -75,19 +60,19 @@ export default async function DashboardPage() {
 
       {/* KPIs mois */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <StatCard label="Solde total"      value={FMT(balance)}               color={balance >= 0 ? 'var(--acc)' : 'var(--danger)'} sub="Tous revenus - dépenses" />
-        <StatCard label="Revenus du mois"  value={FMT(monthIncome)}            color="var(--acc)" />
-        <StatCard label="Dépenses du mois" value={FMT(monthExpenses)}          color="var(--danger)" />
-        <StatCard label="Épargne nette"    value={FMT(monthIncome - monthExpenses)} color={monthIncome - monthExpenses >= 0 ? 'var(--acc)' : 'var(--danger)'} />
+        <StatCard label="Solde total"      value={formatMAD(summary.balance)}               color={summary.balance >= 0 ? 'var(--acc)' : 'var(--danger)'} sub="Tous revenus - dépenses" />
+        <StatCard label="Revenus du mois"  value={formatMAD(summary.monthIncome)}            color="var(--acc)" />
+        <StatCard label="Dépenses du mois" value={formatMAD(summary.monthExpenses)}          color="var(--danger)" />
+        <StatCard label="Épargne nette"    value={formatMAD(summary.monthBalance)} color={summary.monthBalance >= 0 ? 'var(--acc)' : 'var(--danger)'} sub={`${summary.savingsRate}% d'épargne`} />
       </div>
 
       {/* Patrimoine */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
         {[
-          { label: '🏦 Épargne Cornet',       value: FMT(Math.max(0, totalSaved)),  color: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
-          { label: '📈 Portefeuille Bourse',  value: FMT(totalPortfolio),           color: '#a78bfa', border: 'rgba(167,139,250,0.25)' },
-          { label: '🔄 Abonnements/an',       value: FMT(totalSubs),               color: '#38bdf8', border: 'rgba(56,189,248,0.25)' },
-          { label: '💎 Patrimoine total',     value: FMT(patrimoine),              color: 'var(--acc)', border: 'rgba(0,212,170,0.25)' },
+          { label: '🏦 Épargne Cornet',       value: formatMAD(Math.max(0, summary.totalSaved)),  color: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
+          { label: '📈 Portefeuille Bourse',  value: formatMAD(summary.totalPortfolio),           color: '#a78bfa', border: 'rgba(167,139,250,0.25)' },
+          { label: '🔄 Abonnements/an',       value: formatMAD(summary.totalSubscriptions),       color: '#38bdf8', border: 'rgba(56,189,248,0.25)' },
+          { label: '💎 Patrimoine total',     value: formatMAD(summary.patrimoine),              color: 'var(--acc)', border: 'rgba(0,212,170,0.25)' },
         ].map(item => (
           <div key={item.label} style={{
             flex: 1, minWidth: 140, background: 'var(--card)',

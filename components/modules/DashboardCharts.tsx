@@ -1,9 +1,3 @@
-'use client'
-
-import { useRef, useEffect } from 'react'
-import { Chart, registerables } from 'chart.js'
-Chart.register(...registerables)
-
 const FMT = (n: number) =>
   new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n)) + ' MAD'
 
@@ -23,10 +17,6 @@ const CC: Record<string, string> = {
 }
 
 export default function DashboardCharts({ chartData, catData, recentTxs }: Props) {
-  const barRef  = useRef<HTMLCanvasElement>(null)
-  const donutRef = useRef<HTMLCanvasElement>(null)
-  const barInst  = useRef<Chart | null>(null)
-  const donutInst = useRef<Chart | null>(null)
 
   useEffect(() => {
     if (!barRef.current) return

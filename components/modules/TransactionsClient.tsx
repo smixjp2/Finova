@@ -3,20 +3,15 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { PageHeader, ActionButton, FormPanel, Card } from '@/components/ui'
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, getToday, getCurrentMonth, formatMAD } from '@/lib/constants'
 import type { Transaction, NewTransaction } from '@/types'
 
 const CATS = {
-  expense: ['Logement','Alimentation','Transport','Loisirs','Shopping','Santé','Éducation','Abonnements','Autre'],
-  income:  ['Salaire','Freelance','Investissement','Cadeau','Remboursement','Autre'],
+  expense: EXPENSE_CATEGORIES,
+  income: INCOME_CATEGORIES,
 }
-const CC: Record<string, string> = {
-  Logement:'#7c3aed',Alimentation:'#f59e0b',Transport:'#3b82f6',Loisirs:'#ec4899',
-  Shopping:'#a78bfa',Santé:'#10b981',Éducation:'#14b8a6',Abonnements:'#f97316',Autre:'#64748b',
-  Salaire:'#00d4aa',Freelance:'#34d399',Investissement:'#a78bfa',Cadeau:'#fb7185',Remboursement:'#38bdf8',
-}
-const FMT = (n: number) =>
-  new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' MAD'
-const TODAY = () => new Date().toISOString().split('T')[0]
+const CC = CATEGORY_COLORS
+const FMT = (n: number) => formatMAD(n)
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px', background: 'var(--card)',
@@ -31,9 +26,9 @@ export default function TransactionsClient({ initialTxs, userId }: Props) {
   const [showAdd, setShowAdd] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fType, setFType]     = useState<'all' | 'income' | 'expense'>('all')
-  const [fMonth, setFMonth]   = useState(TODAY().slice(0, 7))
+  const [fMonth, setFMonth]   = useState(getToday().slice(0, 7))
   const [form, setForm]       = useState<NewTransaction>({
-    type: 'expense', amount: 0, category: 'Alimentation', description: '', date: TODAY(),
+    type: 'expense', amount: 0, category: EXPENSE_CATEGORIES[0], description: '', date: getToday(),
   })
   const supabase = createClient()
 
@@ -47,7 +42,7 @@ export default function TransactionsClient({ initialTxs, userId }: Props) {
       .single()
     if (!error && data) {
       setTxs(prev => [data, ...prev])
-      setForm({ type: form.type, amount: 0, category: form.category, description: '', date: TODAY() })
+      setForm({ type: form.type, amount: 0, category: form.category, description: '', date: getToday() })
       setShowAdd(false)
     }
     setLoading(false)
