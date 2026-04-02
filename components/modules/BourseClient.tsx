@@ -4,8 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { Chart, registerables } from 'chart.js'
 import { PageHeader, ActionButton, FormPanel, StatCard } from '@/components/ui'
-import { INVESTMENT_SECTORS, INVESTMENT_SECTOR_COLORS } from '@/lib/constants'
-import { formatMAD, formatDecimal, getToday } from '@/lib/calculations'
+import { INVESTMENT_SECTORS, INVESTMENT_SECTOR_COLORS, getToday } from '@/lib/constants'
+import { formatMAD, formatDecimal } from '@/lib/calculations'
 import type { Investment } from '@/types'
 Chart.register(...registerables)
 

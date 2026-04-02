@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { Chart, registerables } from 'chart.js'
 import { PageHeader, ActionButton, FormPanel, StatCard } from '@/components/ui'
-import { formatMAD, getToday } from '@/lib/calculations'
+import { getToday } from '@/lib/constants'
+import { formatMAD } from '@/lib/calculations'
 import type { SavingEntry } from '@/types'
 Chart.register(...registerables)
 const inputStyle: React.CSSProperties = {
