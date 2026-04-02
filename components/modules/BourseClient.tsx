@@ -81,7 +81,7 @@ export default function BourseClient({ initialData, userId }: { initialData: Inv
 
   return (
     <div>
-      <PageHeader title="📈 Bourse & Investissements" subtitle="Suivi de votre portefeuille"
+      <PageHeader title="Bourse & Investissements" subtitle="Suivi de votre portefeuille"
         action={<ActionButton color="#a78bfa" textColor="#fff" onClick={() => setShowForm(!showForm)}>{showForm ? 'Fermer' : '+ Position'}</ActionButton>} />
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>

@@ -57,7 +57,7 @@ export default function AbonnementsClient({ initialData, userId }: { initialData
 
   return (
     <div>
-      <PageHeader title="🔄 Abonnements Annuels" subtitle="Gérez et épargnez avant chaque renouvellement"
+      <PageHeader title="Abonnements Annuels" subtitle="Gérez et épargnez avant chaque renouvellement"
         action={<ActionButton color="#38bdf8" textColor="#000" onClick={() => setShowForm(!showForm)}>{showForm ? 'Fermer' : '+ Abonnement'}</ActionButton>} />
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>

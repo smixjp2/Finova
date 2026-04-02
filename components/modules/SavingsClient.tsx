@@ -64,7 +64,7 @@ export default function SavingsClient({ initialData, userId }: { initialData: Sa
 
   return (
     <div>
-      <PageHeader title="🏦 Épargne Cornet" subtitle="Suivi de votre compte épargne"
+      <PageHeader title="Épargne Cornet" subtitle="Suivi de votre compte épargne"
         action={<ActionButton color="#f59e0b" onClick={() => setShowForm(!showForm)}>{showForm ? 'Fermer' : '+ Mouvement'}</ActionButton>} />
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
