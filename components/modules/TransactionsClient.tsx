@@ -1,14 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import { PageHeader, ActionButton, FormPanel, Card } from '@/components/ui'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_COLORS, getToday, getCurrentMonth } from '@/lib/constants'
 import { formatMAD } from '@/lib/calculations'
 import type { Transaction, NewTransaction } from '@/types'
 
 const CATS = {
-  expense: EXPENSE_CATEGORIES,
   income: INCOME_CATEGORIES,
 }
 const CC = CATEGORY_COLORS
@@ -31,7 +29,6 @@ export default function TransactionsClient({ initialTxs, userId }: Props) {
   const [form, setForm]       = useState<NewTransaction>({
     type: 'expense', amount: 0, category: EXPENSE_CATEGORIES[0], description: '', date: getToday(),
   })
-  const supabase = createClient()
 
   const addTx = async () => {
     if (!form.amount || form.amount <= 0) {
@@ -40,29 +37,43 @@ export default function TransactionsClient({ initialTxs, userId }: Props) {
     }
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert({ ...form, user_id: userId })
-        .select()
-        .single()
-      if (error) {
-        console.error('Erreur ajout transaction:', error)
-        alert('Erreur: ' + (error.message || 'Impossible d\'ajouter la transaction'))
-      } else if (data) {
-        setTxs(prev => [data, ...prev])
+      // Generate a new transaction object
+      const newTx = {
+        id: Math.random().toString(36).slice(2),
+        type: form.type,
+        amount: form.amount,
+        category: form.category,
+        description: form.description,
+        date: form.date,
+        created_at: new Date().toISOString(),
+      }
+      // Save to local API (write to JSON file)
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTx),
+      })
+      if (res.ok) {
+        setTxs(prev => [newTx, ...prev])
         setForm({ type: form.type, amount: 0, category: form.category, description: '', date: getToday() })
         setShowAdd(false)
+      } else {
+        alert('Erreur: impossible d\'ajouter la transaction')
       }
     } catch (err) {
-      console.error('Erreur:', err)
-      alert('Erreur réseau ou configuration Supabase')
+      alert('Erreur réseau ou écriture fichier')
     }
     setLoading(false)
   }
 
   const deleteTx = async (id: string) => {
-    await supabase.from('transactions').delete().eq('id', id)
-    setTxs(prev => prev.filter(t => t.id !== id))
+    // Remove from local API (write to JSON file)
+    const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setTxs(prev => prev.filter(t => t.id !== id))
+    } else {
+      alert('Erreur suppression')
+    }
   }
 
   const filtered = txs.filter(t => {

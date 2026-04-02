@@ -1,16 +1,17 @@
-import { createClient } from '@/lib/supabase-server'
+import fs from 'fs'
+import path from 'path'
 import TransactionsClient from '@/components/modules/TransactionsClient'
 
 export default async function TransactionsPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const userId = user?.id ?? '550e8400-e29b-41d4-a716-446655440000'
-
-  const { data: txs } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .order('date', { ascending: false })
-
-  return <TransactionsClient initialTxs={txs ?? []} userId={userId} />
+  // Read transactions from local JSON file
+  const filePath = path.join(process.cwd(), 'data', 'transactions.json')
+  let txs = []
+  try {
+    const file = fs.readFileSync(filePath, 'utf-8')
+    txs = JSON.parse(file)
+  } catch (e) {
+    txs = []
+  }
+  // No userId needed anymore
+  return <TransactionsClient initialTxs={txs} userId={''} />
 }
