@@ -12,21 +12,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const now   = new Date()
   const month = now.toISOString().slice(0, 7)
 
-  const [{ data: txs }, { data: subs }] = await Promise.all([
+  const [{ data: txs, error: txsError }, { data: subs, error: subsError }] = await Promise.all([
     supabase.from('transactions').select('type,amount,date').eq('user_id', userId),
     supabase.from('subscriptions').select('renewal_date').eq('user_id', userId),
   ])
 
-  const allTxs       = txs ?? []
-  const totalIncome  = allTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const totalExp     = allTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  if (txsError) console.error('Transactions error:', txsError)
+  if (subsError) console.error('Subscriptions error:', subsError)
+
+  const allTxs       = (txs ?? []) as any[]
+  const totalIncome  = allTxs.filter(t => t && t.type === 'income').reduce((s, t) => s + (t?.amount ?? 0), 0)
+  const totalExp     = allTxs.filter(t => t && t.type === 'expense').reduce((s, t) => s + (t?.amount ?? 0), 0)
   const balance      = totalIncome - totalExp
-  const monthTxs     = allTxs.filter(t => t.date.startsWith(month))
-  const monthIncome  = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const monthExpenses = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const monthTxs     = allTxs.filter(t => t && t.date && t.date.startsWith(month))
+  const monthIncome  = monthTxs.filter(t => t && t.type === 'income').reduce((s, t) => s + (t?.amount ?? 0), 0)
+  const monthExpenses = monthTxs.filter(t => t && t.type === 'expense').reduce((s, t) => s + (t?.amount ?? 0), 0)
 
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const upcomingSubsCount = (subs ?? []).filter(s => {
+    if (!s || !s.renewal_date) return false
     const r = new Date(s.renewal_date); r.setHours(0, 0, 0, 0)
     return Math.ceil((r.getTime() - today.getTime()) / 86400000) <= 60
   }).length

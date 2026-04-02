@@ -1,4 +1,6 @@
 // Shared calculation utilities for consistent data across modules
+import type { Transaction as TransactionType, SavingEntry as SavingEntryType, Investment as InvestmentType, Subscription as SubscriptionType } from '@/types'
+
 export interface FinancialSummary {
   totalIncome: number
   totalExpenses: number
@@ -13,39 +15,14 @@ export interface FinancialSummary {
   patrimoine: number
 }
 
-export interface Transaction {
-  id: string
-  type: 'income' | 'expense'
-  amount: number
-  category: string
-  date: string
-  created_at: string
-}
-
-export interface SavingEntry {
-  id: string
-  type: 'deposit' | 'withdrawal'
-  amount: number
-  date: string
-}
-
-export interface Investment {
-  current_price: number
-  quantity: number
-}
-
-export interface Subscription {
-  amount: number
-}
-
 /**
  * Calculates comprehensive financial summary
  */
 export function calculateFinancialSummary(
-  transactions: Transaction[] = [],
-  savings: SavingEntry[] = [],
-  investments: Investment[] = [],
-  subscriptions: Subscription[] = []
+  transactions: TransactionType[] = [],
+  savings: SavingEntryType[] = [],
+  investments: InvestmentType[] = [],
+  subscriptions: SubscriptionType[] = []
 ): FinancialSummary {
   const currentMonth = new Date().toISOString().slice(0, 7)
 
@@ -146,7 +123,7 @@ export interface MonthData {
   expenses: number
 }
 
-export function getLast6Months(transactions: Transaction[] = []): MonthData[] {
+export function getLast6Months(transactions: TransactionType[] = []): MonthData[] {
   const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
   return Array.from({ length: 6 }, (_, i) => {
     const d = new Date()

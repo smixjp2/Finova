@@ -14,16 +14,21 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const userId = user?.id ?? '550e8400-e29b-41d4-a716-446655440000'
 
-  const [{ data: txs }, { data: savings }, { data: investments }, { data: subs }] = await Promise.all([
+  const [{ data: txs, error: txsError }, { data: savings, error: savingsError }, { data: investments, error: invError }, { data: subs, error: subsError }] = await Promise.all([
     supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
     supabase.from('savings').select('type,amount').eq('user_id', userId),
     supabase.from('investments').select('current_price,quantity').eq('user_id', userId),
     supabase.from('subscriptions').select('amount').eq('user_id', userId),
   ])
 
+  if (txsError) console.error('Dashboard txs error:', txsError)
+  if (savingsError) console.error('Dashboard savings error:', savingsError)
+  if (invError) console.error('Dashboard investments error:', invError)
+  if (subsError) console.error('Dashboard subscriptions error:', subsError)
+
   const month  = new Date().toISOString().slice(0, 7)
   const allTxs = (txs ?? []) as any[]
-  const monthTxs = allTxs.filter(t => t.date.startsWith(month))
+  const monthTxs = allTxs.filter(t => t && t.date && t.date.startsWith(month))
 
   // Calculate comprehensive summary
   const summary = calculateFinancialSummary(
@@ -38,7 +43,7 @@ export default async function DashboardPage() {
 
   // Category breakdown for current month
   const catData = monthTxs
-    .filter((t: any) => t.type === 'expense')
+    .filter((t: any) => t && t.type === 'expense' && t.category)
     .reduce((acc: { name: string; value: number; fill: string }[], t: any) => {
       const e = acc.find(c => c.name === t.category)
       if (e) e.value += t.amount
