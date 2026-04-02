@@ -10,13 +10,16 @@ const CC: Record<string, string> = {
 export default async function ReportsPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const userId = user?.id ?? '550e8400-e29b-41d4-a716-446655440000'
+  
+  if (!user) {
+    return <div style={{ padding: '20px', color: '#ccc' }}>Non authentifié. Veuillez vous connecter.</div>
+  }
 
   const [{ data: txs, error: txsError }, { data: savings, error: savingsError }, { data: investments, error: invError }, { data: subs, error: subsError }] = await Promise.all([
-    supabase.from('transactions').select('*').eq('user_id', userId),
-    supabase.from('savings').select('type,amount').eq('user_id', userId),
-    supabase.from('investments').select('current_price,quantity').eq('user_id', userId),
-    supabase.from('subscriptions').select('amount').eq('user_id', userId),
+    supabase.from('transactions').select('*').eq('user_id', user.id),
+    supabase.from('savings').select('type,amount').eq('user_id', user.id),
+    supabase.from('investments').select('current_price,quantity').eq('user_id', user.id),
+    supabase.from('subscriptions').select('amount').eq('user_id', user.id),
   ])
 
   if (txsError) console.error('Reports txs error:', txsError)

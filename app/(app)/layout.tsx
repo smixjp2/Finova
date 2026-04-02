@@ -6,15 +6,17 @@ import Sidebar from '@/components/ui/Sidebar'
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  // Use mock user ID if no authentication
-  const userId = user?.id ?? '550e8400-e29b-41d4-a716-446655440000'
+  
+  if (!user) {
+    return <div style={{ padding: '20px', color: '#ccc' }}>Non authentifié. Veuillez vous connecter.</div>
+  }
 
   const now   = new Date()
   const month = now.toISOString().slice(0, 7)
 
   const [{ data: txs, error: txsError }, { data: subs, error: subsError }] = await Promise.all([
-    supabase.from('transactions').select('type,amount,date').eq('user_id', userId),
-    supabase.from('subscriptions').select('renewal_date').eq('user_id', userId),
+    supabase.from('transactions').select('type,amount,date').eq('user_id', user.id),
+    supabase.from('subscriptions').select('renewal_date').eq('user_id', user.id),
   ])
 
   if (txsError) console.error('Transactions error:', txsError)

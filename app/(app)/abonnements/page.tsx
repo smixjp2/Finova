@@ -4,7 +4,11 @@ import AbonnementsClient from '@/components/modules/AbonnementsClient'
 export default async function AbonnementsPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const userId = user?.id ?? '550e8400-e29b-41d4-a716-446655440000'
-  const { data } = await supabase.from('subscriptions').select('*').eq('user_id', userId).order('renewal_date', { ascending: true })
-  return <AbonnementsClient initialData={data ?? []} userId={userId} />
+  
+  if (!user) {
+    return <div style={{ padding: '20px', color: '#ccc' }}>Non authentifié. Veuillez vous connecter.</div>
+  }
+  
+  const { data } = await supabase.from('subscriptions').select('*').eq('user_id', user.id).order('renewal_date', { ascending: true })
+  return <AbonnementsClient initialData={data ?? []} userId={user.id} />
 }
